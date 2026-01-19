@@ -5,6 +5,7 @@ import os
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import pytz # Required for Indian Time
 
 # ----------------------------
 # PAGE CONFIG
@@ -12,12 +13,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="FinBox Onboarding", page_icon="🟦", layout="wide")
 
 # ----------------------------
-# 1. GOOGLE SHEETS LOGGING (With Debug Messages)
+# 1. GOOGLE SHEETS LOGGING (With IST Timezone)
 # ----------------------------
 def log_user_access():
     """
-    Logs user access to Google Sheet using Streamlit Secrets.
-    Includes visual success/error messages for debugging.
+    Logs access to Google Sheets.
+    Captures Indian Standard Time (IST).
     """
     try:
         # Define Scope
@@ -40,41 +41,38 @@ def log_user_access():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
 
-        # Open the Sheet (Make sure your Google Sheet is named EXACTLY 'FinBox_Logs')
+        # Open the Sheet
         sheet = client.open("FinBox_Logs").sheet1
 
-        # Get User Info
+        # Get User Info (Will be "Unknown" if not using Login Logic)
         try:
             headers = st.context.headers
             user_email = headers.get("X-Shared-Email", "Unknown/Local User")
         except:
             user_email = "Unknown/Local User"
 
-        now = datetime.datetime.now()
+        # --- TIMEZONE FIX (IST) ---
+        ist = pytz.timezone('Asia/Kolkata')
+        now = datetime.datetime.now(ist)
+        
         date_str = now.strftime("%Y-%m-%d")
         time_str = now.strftime("%H:%M:%S")
 
         # Append Row
         sheet.append_row([date_str, time_str, user_email])
-        
-        # DEBUG MESSAGE (Remove this once you see it working)
-        # st.success(f"✅ Connected to Sheets! Logged: {user_email}")
+        print(f"✅ Logged to Sheets: {user_email} at {time_str}")
 
     except Exception as e:
-        # ERROR MESSAGE (This tells you WHY it failed)
-        st.error(f"❌ Logging Failed: {e}")
+        # Print error to console so app doesn't crash for user
+        print(f"⚠️ Logging Error: {e}")
 
-# Run Logging
+# Run Logging automatically on load
 log_user_access()
 
 # ----------------------------
 # 2. ROBUST IMAGE LOADER
 # ----------------------------
 def get_image_base64(file_name_prefix):
-    """
-    Looks for file_name_prefix with various extensions in the script folder.
-    Handles case sensitivity (Logo.png vs LOGO.png).
-    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     extensions = ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG']
     
@@ -94,9 +92,7 @@ def get_image_base64(file_name_prefix):
     return None
 
 # Load Logo
-logo_src = get_image_base64("Logo")
-if not logo_src:
-    logo_src = "https://img.icons8.com/fluency/96/diamond.png" 
+logo_src = get_image_base64("Logo") or "https://img.icons8.com/fluency/96/diamond.png" 
 
 # ----------------------------
 # 3. AGENDA DATA
@@ -125,7 +121,7 @@ agenda_items = [
 ]
 
 # ----------------------------
-# 4. CSS STYLES (Mobile Optimized)
+# 4. CSS STYLES (Streamlit)
 # ----------------------------
 st.markdown("""
 <style>
@@ -223,7 +219,7 @@ html_code = f"""
         height: 100vh; width: 100vw;
         display: flex; flex-direction: column;
         
-        /* UPDATED: Align to top so we can push down with padding */
+        /* Align to top so we can push down with padding */
         justify-content: flex-start; 
         align-items: center; 
     }}
@@ -231,7 +227,7 @@ html_code = f"""
     /* --- RESPONSIVE HEADER --- */
     .brand-header {{
         position: absolute; 
-        top: 25px; /* Moved down slightly */
+        top: 25px;
         left: 24px; 
         z-index: 50;
         display: flex; align-items: center; gap: 12px;
@@ -244,7 +240,6 @@ html_code = f"""
     }}
 
     /* --- SWIPER LAYOUT --- */
-    /* UPDATED: Increased top padding for Desktop to 100px */
     .swiper {{ 
         width: 100%; 
         height: 100%; 
