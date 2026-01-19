@@ -3,7 +3,8 @@ import streamlit.components.v1 as components
 import base64
 import os
 import datetime
-import csv
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # ----------------------------
 # PAGE CONFIG
@@ -11,32 +12,57 @@ import csv
 st.set_page_config(page_title="FinBox Onboarding", page_icon="🟦", layout="wide")
 
 # ----------------------------
-# 1. LOGGING FUNCTION
+# 1. GOOGLE SHEETS LOGGING FUNCTION
 # ----------------------------
 def log_user_access():
     """
-    Logs user access to login_log.csv
+    Logs user access to Google Sheet using Streamlit Secrets.
     """
-    log_file = "login_log.csv"
     try:
-        headers = st.context.headers
-        user_email = headers.get("X-Shared-Email", "Unknown/Local User")
-    except:
-        user_email = "Unknown/Local User"
+        # Define Scope
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-    now = datetime.datetime.now()
-    date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H:%M:%S")
+        # Load Credentials from Secrets
+        # We reconstruct the dictionary structure gspread expects
+        creds_dict = {
+            "type": st.secrets["gcp_service_account"]["type"],
+            "project_id": st.secrets["gcp_service_account"]["project_id"],
+            "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
+            "private_key": st.secrets["gcp_service_account"]["private_key"],
+            "client_email": st.secrets["gcp_service_account"]["client_email"],
+            "client_id": st.secrets["gcp_service_account"]["client_id"],
+            "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
+            "token_uri": st.secrets["gcp_service_account"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"],
+        }
+        
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
 
-    if not os.path.exists(log_file):
-        with open(log_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Date", "Time", "User Email"])
+        # Open the Sheet (Make sure your Google Sheet is named EXACTLY 'FinBox_Logs')
+        sheet = client.open("FinBox_Logs").sheet1
 
-    with open(log_file, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([date_str, time_str, user_email])
+        # Get User Info
+        try:
+            headers = st.context.headers
+            user_email = headers.get("X-Shared-Email", "Unknown/Local User")
+        except:
+            user_email = "Unknown/Local User"
 
+        now = datetime.datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M:%S")
+
+        # Append Row
+        sheet.append_row([date_str, time_str, user_email])
+        print(f"✅ Logged to Sheets: {user_email}")
+
+    except Exception as e:
+        # If logging fails (e.g. while testing locally without secrets), just print to console
+        print(f"⚠️ Logging Error (Non-Critical): {e}")
+
+# Run Logging
 log_user_access()
 
 # ----------------------------
@@ -74,7 +100,7 @@ if not logo_src:
 # 3. AGENDA DATA
 # ----------------------------
 agenda_items = [
-    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome", "desc": "Warm welcome by the FinBox HR POC."},
+    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome & Icebreaker", "desc": "Warm welcome, introductions, and a short icebreaker activity."},
     {"time": "10:15 AM", "duration": "30 Min", "title": "Introduction to Finbox", "desc": "Company history, milestones, roadmap, and key leadership overview."},
     {"time": "10:45 AM", "duration": "30 Min", "title": "Office Tour", "desc": "Walkthrough of office space, key teams, and amenities."},
     {"time": "11:15 AM", "duration": "15 Min", "title": "Morning Break", "desc": "Short recharge before the deep dive."},
@@ -92,7 +118,7 @@ agenda_items = [
         "time": "Day 1 Complete", 
         "duration": "∞", 
         "title": "Welcome Aboard!", 
-        "desc": "Your FinBox journey starts here."
+        "desc": "Congratulations! You are now officially a FinBoxer. 🚀"
     },
 ]
 
