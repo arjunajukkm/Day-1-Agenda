@@ -15,15 +15,11 @@ st.set_page_config(page_title="FinBox Onboarding", page_icon="🟦", layout="wid
 # 1. GOOGLE SHEETS LOGGING FUNCTION
 # ----------------------------
 def log_user_access():
-    """
-    Logs user access to Google Sheet using Streamlit Secrets.
-    """
     try:
         # Define Scope
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-        # Load Credentials from Secrets
-        # We reconstruct the dictionary structure gspread expects
+        # Load Credentials
         creds_dict = {
             "type": st.secrets["gcp_service_account"]["type"],
             "project_id": st.secrets["gcp_service_account"]["project_id"],
@@ -40,7 +36,7 @@ def log_user_access():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
 
-        # Open the Sheet (Make sure your Google Sheet is named EXACTLY 'FinBox_Logs')
+        # Open the Sheet
         sheet = client.open("FinBox_Logs").sheet1
 
         # Get User Info
@@ -56,15 +52,14 @@ def log_user_access():
 
         # Append Row
         sheet.append_row([date_str, time_str, user_email])
-        print(f"✅ Logged to Sheets: {user_email}")
+        
+        # SUCCESS MESSAGE (Remove this after it works)
+        st.success(f"✅ Debug Success: Connected to Google Sheet! Logged: {user_email}")
 
     except Exception as e:
-        # If logging fails (e.g. while testing locally without secrets), just print to console
-        print(f"⚠️ Logging Error (Non-Critical): {e}")
-
-# Run Logging
-log_user_access()
-
+        # FAIL MESSAGE
+        st.error(f"❌ Google Sheets Error: {e}")
+        
 # ----------------------------
 # 2. ROBUST IMAGE LOADER
 # ----------------------------
