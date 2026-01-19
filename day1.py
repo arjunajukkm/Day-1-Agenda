@@ -92,7 +92,7 @@ agenda_items = [
         "time": "Day 1 Complete", 
         "duration": "∞", 
         "title": "Welcome Aboard!", 
-        "desc": "We’re excited to have you with us. Your FinBox journey starts here."
+        "desc": "Your FinBox journey starts here."
     },
 ]
 
