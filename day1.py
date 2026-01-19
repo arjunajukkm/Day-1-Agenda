@@ -12,14 +12,18 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="FinBox Onboarding", page_icon="🟦", layout="wide")
 
 # ----------------------------
-# 1. GOOGLE SHEETS LOGGING FUNCTION
+# 1. GOOGLE SHEETS LOGGING (With Debug Messages)
 # ----------------------------
 def log_user_access():
+    """
+    Logs user access to Google Sheet using Streamlit Secrets.
+    Includes visual success/error messages for debugging.
+    """
     try:
         # Define Scope
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-        # Load Credentials
+        # Load Credentials from Secrets
         creds_dict = {
             "type": st.secrets["gcp_service_account"]["type"],
             "project_id": st.secrets["gcp_service_account"]["project_id"],
@@ -36,7 +40,7 @@ def log_user_access():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
 
-        # Open the Sheet
+        # Open the Sheet (Make sure your Google Sheet is named EXACTLY 'FinBox_Logs')
         sheet = client.open("FinBox_Logs").sheet1
 
         # Get User Info
@@ -53,13 +57,16 @@ def log_user_access():
         # Append Row
         sheet.append_row([date_str, time_str, user_email])
         
-        # SUCCESS MESSAGE (Remove this after it works)
-        st.success(f"✅ Debug Success: Connected to Google Sheet! Logged: {user_email}")
+        # DEBUG MESSAGE (Remove this once you see it working)
+        # st.success(f"✅ Connected to Sheets! Logged: {user_email}")
 
     except Exception as e:
-        # FAIL MESSAGE
-        st.error(f"❌ Google Sheets Error: {e}")
-        
+        # ERROR MESSAGE (This tells you WHY it failed)
+        st.error(f"❌ Logging Failed: {e}")
+
+# Run Logging
+log_user_access()
+
 # ----------------------------
 # 2. ROBUST IMAGE LOADER
 # ----------------------------
@@ -118,7 +125,7 @@ agenda_items = [
 ]
 
 # ----------------------------
-# 4. CSS STYLES (Streamlit)
+# 4. CSS STYLES (Mobile Optimized)
 # ----------------------------
 st.markdown("""
 <style>
