@@ -98,7 +98,7 @@ logo_src = get_image_base64("Logo") or "https://img.icons8.com/fluency/96/diamon
 # 3. AGENDA DATA
 # ----------------------------
 agenda_items = [
-    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome & Icebreaker", "desc": "Warm welcome, introductions, and a short icebreaker activity."},
+    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome", "desc": "Warm welcome by FinBox HR POC"},
     {"time": "10:15 AM", "duration": "30 Min", "title": "Introduction to Finbox", "desc": "Company history, milestones, roadmap, and key leadership overview."},
     {"time": "10:45 AM", "duration": "30 Min", "title": "Office Tour", "desc": "Walkthrough of office space, key teams, and amenities."},
     {"time": "11:15 AM", "duration": "15 Min", "title": "Morning Break", "desc": "Short recharge before the deep dive."},
@@ -116,7 +116,7 @@ agenda_items = [
         "time": "Day 1 Complete", 
         "duration": "∞", 
         "title": "Welcome Aboard!", 
-        "desc": "Congratulations! You are now officially a FinBoxer. 🚀"
+        "desc": "Your FinBox Journey Starts here."
     },
 ]
 
