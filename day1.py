@@ -11,16 +11,13 @@ import csv
 st.set_page_config(page_title="FinBox Onboarding", page_icon="🟦", layout="wide")
 
 # ----------------------------
-# 1. LOGGING FUNCTION (User, Date, Time)
+# 1. LOGGING FUNCTION
 # ----------------------------
 def log_user_access():
     """
-    Logs the user email (if available), date, and time to a CSV file.
+    Logs user access to login_log.csv
     """
     log_file = "login_log.csv"
-    
-    # Try to get user email from Streamlit experimental headers (works in deployed apps)
-    # In local development, this usually returns None.
     try:
         headers = st.context.headers
         user_email = headers.get("X-Shared-Email", "Unknown/Local User")
@@ -31,51 +28,53 @@ def log_user_access():
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
 
-    # Create file with header if it doesn't exist
     if not os.path.exists(log_file):
         with open(log_file, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["Date", "Time", "User Email"])
 
-    # Append log entry
     with open(log_file, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([date_str, time_str, user_email])
 
-# Execute Logging
 log_user_access()
 
 # ----------------------------
-# 2. HELPER: LOAD IMAGES (Logo & Slides)
+# 2. ROBUST IMAGE LOADER
 # ----------------------------
 def get_image_base64(file_name_prefix):
     """
-    Looks for file_name_prefix.png/jpg/jpeg.
-    Returns base64 string.
+    Looks for file_name_prefix with various extensions in the script folder.
+    Handles case sensitivity (Logo.png vs LOGO.png).
     """
-    for ext in ['.png', '.jpg', '.jpeg']:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    extensions = ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG']
+    
+    for ext in extensions:
         file_name = f"{file_name_prefix}{ext}"
-        if os.path.exists(file_name):
+        file_path = os.path.join(script_dir, file_name)
+        
+        if os.path.exists(file_path):
             try:
-                with open(file_name, "rb") as f:
+                with open(file_path, "rb") as f:
                     data = f.read()
                     encoded = base64.b64encode(data).decode()
-                    return f"data:image/{ext.replace('.', '')};base64,{encoded}"
+                    return f"data:image/{ext.replace('.', '').lower()};base64,{encoded}"
             except Exception as e:
                 print(f"Error loading {file_name}: {e}")
+    
     return None
 
-# Load Custom LOGO
-logo_src = get_image_base64("LOGO")
+# Load Logo
+logo_src = get_image_base64("Logo")
 if not logo_src:
-    # Fallback if LOGO.png is missing
     logo_src = "https://img.icons8.com/fluency/96/diamond.png" 
 
 # ----------------------------
 # 3. AGENDA DATA
 # ----------------------------
 agenda_items = [
-    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome & Greetings", "desc": "Warm welcome to FinBox by HR Team"},
+    {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome & Icebreaker", "desc": "Warm welcome, introductions, and a short icebreaker activity."},
     {"time": "10:15 AM", "duration": "30 Min", "title": "Introduction to Finbox", "desc": "Company history, milestones, roadmap, and key leadership overview."},
     {"time": "10:45 AM", "duration": "30 Min", "title": "Office Tour", "desc": "Walkthrough of office space, key teams, and amenities."},
     {"time": "11:15 AM", "duration": "15 Min", "title": "Morning Break", "desc": "Short recharge before the deep dive."},
@@ -87,10 +86,18 @@ agenda_items = [
     {"time": "04:30 PM", "duration": "15 Min", "title": "Evening Break", "desc": "Tea/Coffee break."},
     {"time": "04:45 PM", "duration": "60 Min", "title": "POSH Training", "desc": "Mandatory Prevention of Sexual Harassment awareness session."},
     {"time": "05:45 PM", "duration": "30 Min", "title": "HRBP Connect", "desc": "Discussion with HRBP on role expectations, next steps."},
+    
+    # FINAL CARD
+    {
+        "time": "Day 1 Complete", 
+        "duration": "∞", 
+        "title": "Welcome Aboard!", 
+        "desc": "We’re excited to have you with us. Your FinBox journey starts here."
+    },
 ]
 
 # ----------------------------
-# 4. CSS STYLES (Streamlit Container)
+# 4. CSS STYLES (Streamlit)
 # ----------------------------
 st.markdown("""
 <style>
@@ -118,10 +125,18 @@ st.markdown("""
 slides_html = ""
 for idx, item in enumerate(agenda_items, start=1):
     
-    # Load slide image (1.png, 2.png...)
+    # Load slide image
     img_src = get_image_base64(idx)
     if not img_src:
-        img_src = "https://img.icons8.com/fluency/240/image-file.png" # Fallback
+        img_src = "https://img.icons8.com/fluency/240/image-file.png"
+
+    # LOGIC: Check if it is the last card to remove the symbol
+    if idx == len(agenda_items):
+        # Final card: Just the duration text (e.g., "∞")
+        duration_display = item['duration']
+    else:
+        # Normal cards: Stopwatch + Time
+        duration_display = f"⏱ {item['duration']}"
 
     slides_html += f"""
     <div class="swiper-slide">
@@ -141,7 +156,7 @@ for idx, item in enumerate(agenda_items, start=1):
                     <h3>{item['title']}</h3>
                     <p>{item['desc']}</p>
                     <div class="duration-footer">
-                        ⏱ {item['duration']}
+                        {duration_display}
                     </div>
                 </div>
             </div>
@@ -150,7 +165,7 @@ for idx, item in enumerate(agenda_items, start=1):
     """
 
 # ----------------------------
-# 6. RESPONSIVE HTML COMPONENT
+# 6. HTML COMPONENT
 # ----------------------------
 html_code = f"""
 <!DOCTYPE html>
@@ -179,33 +194,37 @@ html_code = f"""
         overflow: hidden;
         height: 100vh; width: 100vw;
         display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
+        
+        /* UPDATED: Align to top so we can push down with padding */
+        justify-content: flex-start; 
+        align-items: center; 
     }}
 
     /* --- RESPONSIVE HEADER --- */
     .brand-header {{
-        position: absolute; top: 20px; left: 24px; z-index: 50;
+        position: absolute; 
+        top: 25px; /* Moved down slightly */
+        left: 24px; 
+        z-index: 50;
         display: flex; align-items: center; gap: 12px;
     }}
-    
-    .brand-logo-img {{
-        height: 32px; /* Default height */
-        width: auto;
-        object-fit: contain;
-    }}
-
+    .brand-logo-img {{ height: 32px; width: auto; object-fit: contain; }}
     .header-text {{
-        font-size: 14px; 
-        color: rgba(255,255,255,0.6); 
+        font-size: 14px; color: rgba(255,255,255,0.6); 
         border-left: 1px solid rgba(255,255,255,0.2); 
-        padding-left: 12px;
-        white-space: nowrap;
+        padding-left: 12px; white-space: nowrap;
     }}
 
     /* --- SWIPER LAYOUT --- */
-    .swiper {{ width: 100%; height: 100%; padding-top: 80px; padding-bottom: 40px; box-sizing: border-box; }}
+    /* UPDATED: Increased top padding for Desktop to 100px */
+    .swiper {{ 
+        width: 100%; 
+        height: 100%; 
+        padding-top: 100px; 
+        padding-bottom: 20px; 
+        box-sizing: border-box; 
+    }}
     
-    /* Default Slide (Desktop) */
     .swiper-slide {{
         width: 320px; height: 500px;
         transition: all 0.5s ease;
@@ -219,7 +238,6 @@ html_code = f"""
         z-index: 20;
     }}
 
-    /* --- CARD STYLING --- */
     .glass-card {{
         width: 100%; height: 100%; border-radius: 24px;
         position: relative; background: var(--fb-card-bg);
@@ -247,13 +265,10 @@ html_code = f"""
         justify-content: space-between;
     }}
 
-    /* --- TYPOGRAPHY & CONTENT --- */
+    /* --- TYPOGRAPHY --- */
     .time-header {{
-        text-align: center;
-        font-size: 22px; 
-        font-weight: 700;
-        color: var(--fb-blue);
-        margin-bottom: 5px;
+        text-align: center; font-size: 22px; font-weight: 700;
+        color: var(--fb-blue); margin-bottom: 5px;
     }}
 
     .visual-container {{
@@ -268,15 +283,12 @@ html_code = f"""
     .swiper-slide-active .visual-container {{ transform: scale(1.05); }}
 
     .text-content {{ text-align: center; }}
-
     h3 {{ margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #fff; line-height: 1.2; }}
     p {{ margin: 0 0 10px 0; font-size: 13px; line-height: 1.4; color: var(--text-muted); }}
 
     .duration-footer {{
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.5);
-        font-weight: 600;
-        padding-top: 8px;
+        font-size: 12px; color: rgba(255, 255, 255, 0.5);
+        font-weight: 600; padding-top: 8px;
         border-top: 1px solid rgba(255,255,255,0.1);
         display: inline-block; width: 100%;
     }}
@@ -285,29 +297,34 @@ html_code = f"""
     .swiper-pagination-bullet {{ background: rgba(255,255,255,0.2); opacity: 1; width: 6px; height: 6px; }}
     .swiper-pagination-bullet-active {{ background: var(--fb-blue); width: 24px; border-radius: 4px; }}
 
-    /* --- MEDIA QUERIES FOR RESPONSIVENESS --- */
-
-    /* Mobile Devices (Portrait) */
+    /* --- MEDIA QUERIES --- */
     @media (max-width: 480px) {{
-        .brand-header {{ top: 15px; left: 15px; gap: 8px; }}
-        .brand-logo-img {{ height: 24px; }}
+        /* Mobile Header */
+        .brand-header {{ top: 20px; left: 16px; gap: 8px; }}
+        .brand-logo-img {{ height: 26px; }}
         .header-text {{ font-size: 12px; padding-left: 8px; }}
-
-        .swiper {{ padding-top: 60px; padding-bottom: 40px; }}
-        .swiper-slide {{ width: 260px; height: 420px; }} /* Smaller Card */
+        
+        /* Mobile Layout Fixes:
+           1. Padding-top 130px: Pushes cards down from logo.
+           2. Height 460px: Fills vertical space better. */
+        .swiper {{ 
+            padding-top: 130px; 
+            padding-bottom: 20px; 
+        }}
+        
+        .swiper-slide {{ width: 270px; height: 460px; }}
         
         .card-content {{ padding: 20px; }}
         .time-header {{ font-size: 18px; }}
         h3 {{ font-size: 18px; }}
         p {{ font-size: 12px; }}
-        .visual-container img {{ max-height: 150px; }}
+        .visual-container img {{ max-height: 160px; }}
     }}
 
-    /* Tablet Devices */
     @media (min-width: 481px) and (max-width: 1024px) {{
         .swiper-slide {{ width: 300px; height: 460px; }}
+        .swiper {{ padding-top: 110px; }}
     }}
-
   </style>
 </head>
 <body>
