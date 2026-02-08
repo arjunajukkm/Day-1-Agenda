@@ -66,8 +66,10 @@ def log_user_access():
         # Print error to console so app doesn't crash for user
         print(f"⚠️ Logging Error: {e}")
 
-# Run Logging automatically on load
-log_user_access()
+# Run Logging only once per session to prevent redundant API calls
+if "logged" not in st.session_state:
+    log_user_access()
+    st.session_state["logged"] = True
 
 # ----------------------------
 # 2. ROBUST IMAGE LOADER
@@ -99,7 +101,7 @@ logo_src = get_image_base64("Logo") or "https://img.icons8.com/fluency/96/diamon
 # ----------------------------
 agenda_items = [
     {"time": "10:00 AM", "duration": "15 Min", "title": "Welcome", "desc": "Warm welcome by FinBox HR POC"},
-    {"time": "10:15 AM", "duration": "30 Min", "title": "Introduction to Finbox", "desc": "Company history, milestones, roadmap, and key leadership overview."},
+    {"time": "10:15 AM", "duration": "30 Min", "title": "Introduction to FinBox", "desc": "Company history, milestones, roadmap, and key leadership overview."},
     {"time": "10:45 AM", "duration": "30 Min", "title": "Office Tour", "desc": "Walkthrough of office space, key teams, and amenities."},
     {"time": "11:15 AM", "duration": "15 Min", "title": "Morning Break", "desc": "Short recharge before the deep dive."},
     {"time": "11:30 AM", "duration": "30 Min", "title": "Product Training", "desc": "Brief Intro and walkthrough on the FinBox products."},
@@ -327,9 +329,7 @@ html_code = f"""
         .brand-logo-img {{ height: 26px; }}
         .header-text {{ font-size: 12px; padding-left: 8px; }}
         
-        /* Mobile Layout Fixes:
-           1. Padding-top 130px: Pushes cards down from logo.
-           2. Height 460px: Fills vertical space better. */
+        /* Mobile Layout Fixes */
         .swiper {{ 
             padding-top: 130px; 
             padding-bottom: 20px; 
@@ -366,6 +366,13 @@ html_code = f"""
 
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <script>
+    // --- KEEP ALIVE HEARTBEAT ---
+    // This sends a tiny request every 5 minutes to prevent Streamlit from idling.
+    function keepAlive() {{
+        fetch(window.location.href).catch(e => console.log("Heartbeat"));
+    }}
+    setInterval(keepAlive, 300000); // 300,000ms = 5 minutes
+
     var swiper = new Swiper(".mySwiper", {{
       effect: "coverflow",
       grabCursor: true,
